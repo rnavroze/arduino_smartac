@@ -19,16 +19,22 @@ void setup()
 
 void loop() {
   if (Serial.read() != -1) {
-    //send a code  every time a character is received from the serial port
-    //Sony DVD power A8BCA
-
-unsigned int displayInt;
-unsigned int* ptr = &temp25c[0];
+    unsigned int displayInt;
+    unsigned int* ptr = &temp25c[0];
+    unsigned int currentData[111];
+    
     for (byte k = 0; k < 111; k++) {
-    displayInt = pgm_read_word_near(ptr + k);
-    Serial.println(displayInt);
+      displayInt = pgm_read_word_near(ptr + k);
+      currentData[k] = displayInt;
     }
-    //        My_Sender.IRsendRaw::send(temp25c, 111, 38);
-    Serial.print(".");
+
+
+//    for(int i = 0; i < 111; i++)
+//    {
+//      Serial.print(currentData[i]);
+//      Serial.print(" ");
+//    }
+    My_Sender.IRsendRaw::send(currentData, 111, 38);
+    Serial.println(".");
   }
 }
