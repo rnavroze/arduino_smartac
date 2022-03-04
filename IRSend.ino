@@ -12,6 +12,11 @@
 
 IRsend My_Sender;
 
+
+    unsigned int displayInt;
+    unsigned int* ptr = &temp25c[0];
+    unsigned int currentData[111];
+    
 void setup()
 {
   Serial.begin(9600);
@@ -19,9 +24,9 @@ void setup()
 
 void loop() {
   if (Serial.read() != -1) {
-    unsigned int displayInt;
-    unsigned int* ptr = &temp25c[0];
-    unsigned int currentData[111];
+      Serial.println("start");
+
+  //while(true){
     
     for (byte k = 0; k < 111; k++) {
       displayInt = pgm_read_word_near(ptr + k);
@@ -34,7 +39,14 @@ void loop() {
 //      Serial.print(currentData[i]);
 //      Serial.print(" ");
 //    }
-    My_Sender.IRsendRaw::send(currentData, 111, 38);
-    Serial.println(".");
+    
+    for (int i = 0; i < 100; i++) {
+      My_Sender.IRsendRaw::send(currentData, 111, 38);
+    delay(100);
+    }
+          Serial.println("end");
+
+    
+  //  delay(0.5);  }
   }
 }
