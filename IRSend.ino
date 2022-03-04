@@ -8,45 +8,48 @@
  */
 #include <IRLib.h>
 #include "definitions.h"
-//const   unsigned int  temp25c[111] = {1000,600, 1000,550, 1000,2550, 1000,550, 1000,600, 1000,550, 1050,2550, 950,600, 1000,600, 1000,550, 1000,2550, 1000,600, 1000,2500, 1050,550, 1000,550, 1050,550, 1050,2550, 1000,550, 1000,2550, 1000,550, 1000,600, 1000,2500, 1050,2550, 1000,2550, 1000,550, 1050,550, 1000,550, 1050,2500, 1050,2500, 1000,600, 1000,550, 1000,2600, 1000,550, 1000,600, 1000,550, 1000,600, 1000,550, 1000,600, 1000,550, 1000,650, 1000,550, 1000,600, 950,600, 1000,550, 1000,600, 1000,600, 1000,550, 1050,550, 1050,2500, 1000,550, 1000,600, 1000,600, 1000,2550, 950,600, 1000,600, 950}; 
 
 IRsend My_Sender;
-
-
-    unsigned int displayInt;
-    unsigned int* ptr = &temp25c[0];
-    unsigned int currentData[111];
-    
+unsigned int counter = 10;
+unsigned int* ptr = &temp25c[0];
+unsigned int currentData[111];
+bool flag = true;
+   
 void setup()
 {
   Serial.begin(9600);
 }
 
 void loop() {
-  if (Serial.read() != -1) {
-      Serial.println("start");
-
-  //while(true){
-    
-    for (byte k = 0; k < 111; k++) {
-      displayInt = pgm_read_word_near(ptr + k);
-      currentData[k] = displayInt;
-    }
-
-
-//    for(int i = 0; i < 111; i++)
-//    {
-//      Serial.print(currentData[i]);
-//      Serial.print(" ");
-//    }
-    
-    for (int i = 0; i < 100; i++) {
-      My_Sender.IRsendRaw::send(currentData, 111, 38);
-    delay(100);
-    }
-          Serial.println("end");
-
-    
-  //  delay(0.5);  }
+  if (Serial.available() > 0) {
+      while (Serial.available() > 0) Serial.read();
+      Serial.println("got input");
+      
+      unsigned int displayInt;
+      if (flag) {
+        Serial.println("19c");
+        ptr = &temp19c[0];
+            for (byte k = 0; k < 111; k++) {
+              displayInt = pgm_read_word_near(ptr + k);
+              currentData[k] = displayInt;
+            }
+      } else {
+        Serial.println("25c");
+        ptr = &temp25c[0];
+            for (byte k = 0; k < 111; k++) {
+              displayInt = pgm_read_word_near(ptr + k);
+              currentData[k] = displayInt;
+            }
+      }
+      flag = !flag;
+  }
+     
+  My_Sender.IRsendRaw::send(currentData, 111, 38);
+  delay(2);
+  counter--;
+  if (counter <= 0) {
+    delay(2000);
+    Serial.print(".");
+    counter = 10;
   }
 }
