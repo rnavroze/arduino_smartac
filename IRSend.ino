@@ -11,18 +11,13 @@
 #include <IRsend.h>
 #include <ESP8266WiFi.h>
 #include <WiFiClient.h>
-#include <ESP8266WebServer.h>
-#include <ESP8266mDNS.h>
-#include <uri/UriBraces.h>
+#include <ESP8266HTTPClient.h>
+
 #include "definitions.h"
+#include "private_definitions.h"
 
-#ifndef STASSID
-#define STASSID "NETGEAR"
-#define STAPSK  "123456789"
-#endif
-
-
-ESP8266WebServer server(80);
+HTTPClient http;
+WiFiClient client;
 IRsend My_Sender(IR_LED);
 
 unsigned int counter = REPETITIONS;
@@ -31,6 +26,8 @@ short unsigned int currentData[SIGNAL_SIZE];
 
 String lastInput;
 String currentInput;
+
+bool isOutputtingIRSignal;
 
 const char *ssid = STASSID;
 const char *password = STAPSK;
@@ -52,23 +49,6 @@ void setup()
   Serial.print("IP address: ");
   Serial.println(WiFi.localIP());
 
-  if (MDNS.begin("esp8266")) {
-    Serial.println("MDNS responder started");
-  }
-
-  server.on(F("/"), []() {
-    server.send(200, "text/plain", "hello from esp8266!");
-  });
-
-  server.on(UriBraces("/command/{}"), []() {
-    String command = server.pathArg(0);
-    currentInput = command  + "\n";
-    server.send(200, "application/json", "{\"status\": \"success\", \"command\": \"" + command +"\"}");
-  });
-
-  server.begin();
-  Serial.println("HTTP server started");
-
   My_Sender.begin();
   setCurrentData(&AC_TEMP24C[0]);
 
@@ -76,8 +56,37 @@ void setup()
 }
 
 void loop() {
-  server.handleClient();
+  if (!isOutputtingIRSignal) {
+    Serial.print("[HTTP] begin...\n");
+    if (http.begin(client, GET_URL)) {  // HTTP
+      Serial.print("[HTTP] GET...\n");
+      // start connection and send HTTP header
+      int httpCode = http.GET();
+
+      // httpCode will be negative on error
+      if (httpCode > 0) {
+        // HTTP header has been send and Server response header has been handled
+        Serial.printf("[HTTP] GET... code: %d\n", httpCode);
+
+        // file found at server
+        if (httpCode == HTTP_CODE_OK || httpCode == HTTP_CODE_MOVED_PERMANENTLY) {
+          String payload = http.getString();
+          Serial.println(payload);
+          currentInput = payload + "\n";
+        }
+      } else {
+        Serial.printf("[HTTP] GET... failed, error: %s\n", http.errorToString(httpCode).c_str());
+      }
+
+      http.end();
+    } else {
+      Serial.printf("[HTTP} Unable to connect\n");
+    }
+    delay(3000);
+  }
+
   if (lastInput != currentInput) {
+    isOutputtingIRSignal = true;
     String input = currentInput;
     lastInput = currentInput;
     Serial.println("got input" + input);
@@ -105,9 +114,9 @@ void loop() {
     } else if (input == "21\n") {
       setCurrentData(&AC_TEMP22C[0]); // TODO
     } else if (input == "22\n") {
-      setCurrentData(&AC_TEMP22[0]);
+      setCurrentData(&AC_TEMP22C[0]);
     } else if (input == "23\n") {
-      setCurrentData(&AC_TEMP23C[0]); 
+      setCurrentData(&AC_TEMP23C[0]);
     } else if (input == "24\n") {
       setCurrentData(&AC_TEMP24C[0]);
     } else if (input == "25\n") {
@@ -120,17 +129,20 @@ void loop() {
       setCurrentData(&AC_TEMP28C[0]);
     } else {
       Serial.println("Unknown input");
+      isOutputtingIRSignal = false;
     }
 
   }
 
-  My_Sender.sendRaw(currentData, SIGNAL_SIZE, KHZ);
-  delay(2);
-  counter--;
-  if (counter <= 0) {
-    delay(2000);
-    Serial.print(".");
-    counter = REPETITIONS;
+  if (isOutputtingIRSignal) {
+    My_Sender.sendRaw(currentData, SIGNAL_SIZE, KHZ);
+    delay(2);
+    counter--;
+    if (counter <= 0) {
+      Serial.print(".");
+      counter = REPETITIONS;
+      isOutputtingIRSignal = false;
+    }
   }
 }
 
@@ -141,8 +153,4 @@ void setCurrentData(short unsigned int* signalCode) {
     displayInt = pgm_read_word_near(signalCode + k);
     currentData[k] = displayInt;
   }
-}
-
-void handleNotFound() {
-  server.send(404, "application/json", "{\"status\": \"error\"}");
 }
