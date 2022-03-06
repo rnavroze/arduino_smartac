@@ -21,6 +21,7 @@ WiFiClient client;
 IRsend My_Sender(IR_LED);
 
 unsigned int counter = REPETITIONS;
+unsigned int iterator = ITERATIONS;
 short unsigned int* ptr = &AC_TEMP24C[0];
 short unsigned int currentData[SIGNAL_SIZE];
 
@@ -139,9 +140,16 @@ void loop() {
     delay(2);
     counter--;
     if (counter <= 0) {
-      Serial.print(".");
       counter = REPETITIONS;
-      isOutputtingIRSignal = false;
+      if (iterator <= 0) {
+        iterator = ITERATIONS;
+        Serial.print("Sent");
+        isOutputtingIRSignal = false;
+      } else {
+        Serial.print(".");
+        delay(2000);
+        iterator--;
+      }
     }
   }
 }
