@@ -6,18 +6,22 @@
  * Copyright 2009 Ken Shirriff
  * http://www.righto.com/
  */
-#include <IRLib.h>
+#include <Arduino.h>
+#include <IRremoteESP8266.h>
+#include <IRsend.h>
 #include "definitions.h"
 
-IRsend My_Sender;
-unsigned int counter = 10;
-unsigned int* ptr = &AC_TEMP25C[0];
-unsigned int currentData[111];
-bool flag = true;
+IRsend My_Sender(IR_LED);
+unsigned int counter = REPETITIONS;
+short unsigned int* ptr = &AC_TEMP20C[0];
+short unsigned int currentData[SIGNAL_SIZE];
    
 void setup()
 {
-  Serial.begin(9600);
+  delay(1000);
+  Serial.begin(115200);
+  My_Sender.begin();
+  setCurrentData(&AC_TEMP18C[0]);
 }
 
 void loop() {
@@ -66,19 +70,19 @@ void loop() {
       }
        
   }
-     
-  My_Sender.IRsendRaw::send(currentData, 111, 38);
+
+  My_Sender.sendRaw(currentData, SIGNAL_SIZE, KHZ);
   delay(2);
   counter--;
   if (counter <= 0) {
     delay(2000);
     Serial.print(".");
-    counter = 10;
+    counter = REPETITIONS;
   }
 }
 
-void setCurrentData(unsigned int* signalCode) {
-  unsigned int displayInt;
+void setCurrentData(short unsigned int* signalCode) {
+  short unsigned int displayInt;
   
   for (byte k = 0; k < SIGNAL_SIZE; k++) {
     displayInt = pgm_read_word_near(signalCode + k);
