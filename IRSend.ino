@@ -83,7 +83,6 @@ void loop() {
     } else {
       Serial.printf("[HTTP} Unable to connect\n");
     }
-    delay(3000);
   }
 
   if (lastInput != currentInput) {
@@ -133,6 +132,8 @@ void loop() {
       isOutputtingIRSignal = false;
     }
 
+  } else {
+        delay(3000);
   }
 
   if (isOutputtingIRSignal) {
