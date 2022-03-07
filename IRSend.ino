@@ -1,10 +1,6 @@
-/* Example program for from IRLib – an Arduino library for infrared encoding and decoding
-   Version 1.3   January 2014
-   Copyright 2014 by Chris Young http://cyborg5.com
-   Based on original example sketch for IRremote library
-   Version 0.11 September, 2009
-   Copyright 2009 Ken Shirriff
-   http://www.righto.com/
+/* Put together by Raihan Navroze
+   https://github.com/rnavroze
+   Original code copyright respective library maintainers
 */
 #include <Arduino.h>
 #include <IRremoteESP8266.h>
@@ -28,7 +24,9 @@ short unsigned int currentData[SIGNAL_SIZE];
 String lastInput;
 String currentInput;
 
-bool isOutputtingIRSignal;
+bool isOutputtingIRSignal = false;
+bool isOff = false;
+bool unknownInput = false;
 
 const char *ssid = STASSID;
 const char *password = STAPSK;
@@ -83,72 +81,84 @@ void loop() {
     } else {
       Serial.printf("[HTTP} Unable to connect\n");
     }
-  }
 
-  if (lastInput != currentInput) {
-    isOutputtingIRSignal = true;
-    String input = currentInput;
-    lastInput = currentInput;
-    Serial.println("got input" + input);
 
-    if (input == "on\n") {
-      setCurrentData(&AC_ONOFFA[0]);
-    } else if (input == "off\n") {
-      setCurrentData(&AC_ONOFFB[0]);
-    } else if (input == "mode\n") {
-      setCurrentData(&AC_MODE[0]);
-    } else if (input == "turbo\n") {
-      setCurrentData(&AC_TURBO[0]);
-    } else if (input == "swing\n") {
-      setCurrentData(&AC_SWINGON[0]);
-    } else if (input == "16\n") {
-      setCurrentData(&AC_TEMP16C[0]);
-    } else if (input == "17\n") {
-      setCurrentData(&AC_TEMP17C[0]);
-    } else if (input == "18\n") {
-      setCurrentData(&AC_TEMP18C[0]);
-    } else if (input == "19\n") {
-      setCurrentData(&AC_TEMP19C[0]);
-    } else if (input == "20\n") {
-      setCurrentData(&AC_TEMP20C[0]);
-    } else if (input == "21\n") {
-      setCurrentData(&AC_TEMP22C[0]); // TODO
-    } else if (input == "22\n") {
-      setCurrentData(&AC_TEMP22C[0]);
-    } else if (input == "23\n") {
-      setCurrentData(&AC_TEMP23C[0]);
-    } else if (input == "24\n") {
-      setCurrentData(&AC_TEMP24C[0]);
-    } else if (input == "25\n") {
-      setCurrentData(&AC_TEMP25C[0]);
-    } else if (input == "26\n") {
-      setCurrentData(&AC_TEMP26C[0]);
-    } else if (input == "27\n") {
-      setCurrentData(&AC_TEMP27C[0]);
-    } else if (input == "28\n") {
-      setCurrentData(&AC_TEMP28C[0]);
+    if (lastInput != currentInput) {
+      isOutputtingIRSignal = true;
+      String input = currentInput;
+      lastInput = currentInput;
+      Serial.println("got input" + input);
+
+      unknownInput = false;
+      if (input == "on\n") {
+        setCurrentData(&AC_ONOFFA[0]);
+      } else if (input == "off\n") {
+        setCurrentData(&AC_ONOFFB[0]);
+      } else if (input == "mode\n") {
+        setCurrentData(&AC_MODE[0]);
+      } else if (input == "turbo\n") {
+        setCurrentData(&AC_TURBO[0]);
+      } else if (input == "swing\n") {
+        setCurrentData(&AC_SWINGON[0]);
+      } else if (input == "16\n") {
+        setCurrentData(&AC_TEMP16C[0]);
+      } else if (input == "17\n") {
+        setCurrentData(&AC_TEMP17C[0]);
+      } else if (input == "18\n") {
+        setCurrentData(&AC_TEMP18C[0]);
+      } else if (input == "19\n") {
+        setCurrentData(&AC_TEMP19C[0]);
+      } else if (input == "20\n") {
+        setCurrentData(&AC_TEMP20C[0]);
+      } else if (input == "21\n") {
+        setCurrentData(&AC_TEMP22C[0]); // TODO
+      } else if (input == "22\n") {
+        setCurrentData(&AC_TEMP22C[0]);
+      } else if (input == "23\n") {
+        setCurrentData(&AC_TEMP23C[0]);
+      } else if (input == "24\n") {
+        setCurrentData(&AC_TEMP24C[0]);
+      } else if (input == "25\n") {
+        setCurrentData(&AC_TEMP25C[0]);
+      } else if (input == "26\n") {
+        setCurrentData(&AC_TEMP26C[0]);
+      } else if (input == "27\n") {
+        setCurrentData(&AC_TEMP27C[0]);
+      } else if (input == "28\n") {
+        setCurrentData(&AC_TEMP28C[0]);
+      } else {
+        Serial.println("Unknown input");
+        isOutputtingIRSignal = false;
+        unknownInput = true;
+      }
+
+      if (input == "off\n") {
+        isOff = true;
+        Serial.println("AC Off");
+      } else if (!unknownInput) {
+        isOff = false;
+      }
     } else {
-      Serial.println("Unknown input");
-      isOutputtingIRSignal = false;
+      if (isOff) {
+        delay(OFF_DELAY);
+      } else {
+        delay(ON_DELAY);
+      }
     }
-
-  } else {
-        delay(3000);
   }
-
-  if (isOutputtingIRSignal) {
+  else {
     My_Sender.sendRaw(currentData, SIGNAL_SIZE, KHZ);
-    delay(2);
+    delay(COUNTER_DELAY);
     counter--;
     if (counter <= 0) {
       counter = REPETITIONS;
-      if (iterator <= 0) {
+      if (iterator <= 1) {
         iterator = ITERATIONS;
         Serial.print("Sent");
         isOutputtingIRSignal = false;
       } else {
         Serial.print(".");
-        delay(2000);
+        delay(ITERATION_DELAY);
         iterator--;
       }
     }
